@@ -24,7 +24,9 @@
   "homepage": "https://github.com/Jamespahm/NodeJS-ThePerfume-API#readme",
   "dependencies": {
     "ejs": "^3.1.9",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.9.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
