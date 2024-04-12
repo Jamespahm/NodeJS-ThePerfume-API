@@ -1,0 +1,79 @@
+<div class='mt-4'>
+    <div>
+        <h3>Danh sách nước hoa</h3>
+        <a href='/perfume/trash'>Thùng rác </a>
+    </div>
+
+    <table class='table mt-4'>
+        <thead>
+            <tr>
+                <th scope='col'>
+                    Tên nước hoa
+
+                </th>
+                <th scope='col'>
+                    Gia ban
+                </th>
+                <th scope='col'>Tùy chọn </th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each perfume}}
+                <tr>
+                    <td>{{this.tenNH}}</td>
+                    <td>{{this.giaban}}</td>
+                    <td>
+                        <a href='/perfume/edit/{{this.idNH}}'>Sửa</a>
+
+                        <a
+                            href=''
+                            data-toggle='modal'
+                            data-id='{{this.idNH}}'
+                            data-target='#delete-perfume-modal'
+                        >Xóa</a>
+
+                    </td>
+                </tr>
+            {{else}}
+                <tr>
+                    <td colspan='5' class='text-center'>
+                        Chưa có nước hoa nào !
+                        <a href='/perfume/create'>Thêm nước hoa</a>
+                    </td>
+                </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
+
+{{! Confirm delete perfume }}
+<div id='delete-perfume-modal' class='modal' tabindex='-1' role='dialog'>
+    <div class='modal-dialog' role='document'>
+        <div class='modal-content'>
+            <div class='modal-header'>
+                <h5 class='modal-title'>Xóa nước hoa?</h5>
+                <button type='button' class='close' data-dismiss='modal' aria-label='Close'>
+                    <span aria-hidden='true'>&times;</span>
+                </button>
+            </div>
+            <div class='modal-body'>
+                <p>Bạn chắc chắn muốn xóa nước hoa này?</p>
+            </div>
+            <div class='modal-footer'>
+                <button type='button' class='btn btn-secondary' data-dismiss='modal'>Hủy</button>
+                <button id='btn-delete-perfume' type='button' class='btn btn-danger'>Xóa bỏ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{! Delete hidden form }}
+<form name='delete-perfume-form' method='POST'></form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() { var perfumeId; var deleteForm =
+    document.forms['delete-perfume-form']; var btnDeleteCourse = document.getElementById('btn-delete-perfume');
+    $('#delete-perfume-modal').on('show.bs.modal', function (event) { var button = $(event.relatedTarget); perfumeId =
+    button.data('id'); }); btnDeleteCourse.onclick = function () { deleteForm.action = '/perfume/delete/' + perfumeId
+    +'?_method=DELETE'; deleteForm.submit(); } });
+</script>

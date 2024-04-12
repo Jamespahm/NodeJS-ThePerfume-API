@@ -1,0 +1,26 @@
+<h1>Edit Perfume</h1>
+<form action='/perfume/update/{{perfume.idNH}}?_method=PUT' method='POST'>
+    <label for='tenNH'>Tên nước hoa:</label><br />
+    <input type='text' id='tenNH' name='tenNH' value='{{perfume.tenNH}}' required /><br />
+    <label for='giaban'>Giá bán:</label><br />
+    <input type='text' id='giaban' name='giaban' value='{{perfume.giaban}}' required /><br />
+    <label for='dungtich'>Dung tích:</label><br />
+    <input type='text' id='dungtich' name='dungtich' value='{{perfume.dungtich}}' required /><br />
+    <label for='hinhanh1'>Hình ảnh 1:</label><br />
+    <input type='text' id='hinhanh1' name='hinhanh1' value='{{perfume.hinhanh1}}' required /><br />
+    <label for='hinhanh2'>Hình ảnh 2:</label><br />
+    <input type='text' id='hinhanh2' name='hinhanh2' value='{{perfume.hinhanh2}}' required /><br />
+    <label for='hinhanh3'>Hình ảnh 3:</label><br />
+    <input type='text' id='hinhanh3' name='hinhanh3' value='{{perfume.hinhanh3}}' required /><br />
+    <label for='hinhanh4'>Hình ảnh 4:</label><br />
+    <input type='text' id='hinhanh4' name='hinhanh4' value='{{perfume.hinhanh4}}' required /><br />
+    <label for='soluong'>Số lượng:</label><br />
+    <input type='text' id='soluong' name='soluong' value='{{perfume.soluong}}' required /><br />
+    <label for='mota'>Mô tả:</label><br />
+    <textarea id='mota' name='mota' required>{{perfume.mota}}</textarea><br />
+    <label for='idTH'>ID Thương hiệu:</label><br />
+    <input type='text' id='idTH' name='idTH' value='{{perfume.idTH}}' required /><br />
+    <label for='idL'>ID Loại:</label><br />
+    <input type='text' id='idL' name='idL' value='{{perfume.idL}}' required /><br />
+    <button type='submit'>Lưu</button>
+</form>

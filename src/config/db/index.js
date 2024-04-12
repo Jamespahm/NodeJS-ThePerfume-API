@@ -5,7 +5,7 @@ const mysql = require('mysql2');
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    database: 'lpdb1',
+    database: 'theperfumedb',
 });
 
 connection.connect((err) => {

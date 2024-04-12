@@ -1,6 +1,10 @@
 const express = require('express');
 const app = express();
+const path = require('path');
+const methodOverride = require('method-override');
+
 // const morgan = require('morgan');
+const handlebars = require('express-handlebars');
 
 const db = require('./config/db');
 const route = require('./routers/index.router');
@@ -18,6 +22,20 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     next();
 });
+app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride('_method'));
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.engine(
+    'hbs',
+    handlebars.engine({
+        extname: '.hbs',
+    }),
+);
+app.set('view engine', 'hbs');
+app.set('views', path.join(__dirname, 'views'));
+
 //Router
 route(app);
 
