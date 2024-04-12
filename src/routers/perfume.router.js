@@ -3,8 +3,8 @@ const router = express.Router();
 
 const perfumeController = require('../app/controllers/PerfumeController');
 
-router.get('/create', perfumeController.create);
-router.post('/store', perfumeController.store);
+router.get('/creat', perfumeController.creat);
+router.post('/create', perfumeController.create);
 
 router.get('/edit/:id', perfumeController.edit);
 router.put('/update/:id', perfumeController.update);

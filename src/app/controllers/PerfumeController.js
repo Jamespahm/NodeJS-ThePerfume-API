@@ -5,7 +5,6 @@ const crypto = require('crypto');
 
 class PerfumeController {
     // [GET] /perfume
-    // [GET] /perfume
     index(req, res, next) {
         // Thực hiện truy vấn SQL để lấy ra các bản ghi chưa bị xóa mềm
         db.query('SELECT * FROM nuochoa WHERE deleted_at IS NULL', (error, results) => {
@@ -14,7 +13,8 @@ class PerfumeController {
                 res.status(500).json({ error });
                 return;
             }
-            res.render('store', { perfume: results });
+            // res.render('store', { perfume: results });
+            res.json(results);
         });
     }
     // [GET] /perfume/search
@@ -33,11 +33,11 @@ class PerfumeController {
             },
         );
     }
-    create(req, res) {
+    creat(req, res) {
         res.render('create');
     }
     // [POST] /perfume/store
-    store(req, res) {
+    create(req, res) {
         // Tạo slug từ tiêu đề
         let slug = slugify(req.body.tenNH, {
             lower: true, // Chuyển đổi sang chữ thường
@@ -79,7 +79,6 @@ class PerfumeController {
             res.redirect('/perfume');
         });
     }
-
     //[GET] /perfume/:slug
     show(req, res, next) {
         // Lấy giá trị của slug từ request
@@ -100,7 +99,6 @@ class PerfumeController {
             res.json(results[0]);
         });
     }
-
     // [GET] /perfume/edit/:id
     edit(req, res) {
         const id = req.params.id;
@@ -118,7 +116,6 @@ class PerfumeController {
             res.render('edit', { perfume: results[0] });
         });
     }
-
     // [PUT] /perfume/update/:id
     update(req, res) {
         const id = req.params.id;
@@ -205,7 +202,8 @@ class PerfumeController {
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            res.status(200).json({ message: 'Đã khôi phục sản phẩm thành công' });
+            // res.status(200).json({ message: 'Đã khôi phục sản phẩm thành công' });
+            res.redirect('/perfume/trash');
         });
     }
 }

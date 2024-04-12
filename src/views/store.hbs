@@ -9,6 +9,7 @@
             <tr>
                 <th scope='col'>
                     Tên nước hoa
+                    {{!-- {{{sortable 'tenNH' _sort}}} --}}
 
                 </th>
                 <th scope='col'>
@@ -20,7 +21,8 @@
         <tbody>
             {{#each perfume}}
                 <tr>
-                    <td>{{this.tenNH}}</td>
+                    <td>{{this.tenNH}}
+                    </td>
                     <td>{{this.giaban}}</td>
                     <td>
                         <a href='/perfume/edit/{{this.idNH}}'>Sửa</a>

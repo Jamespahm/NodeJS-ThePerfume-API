@@ -20,7 +20,7 @@
             {{#each perfume}}
                 <tr>
                     <td>{{this.tenNH}}</td>
-                    <td>{{this.deleted_at}}</td>
+                    <td>{{formatDate this.deleted_at}}</td>
                     <td>
                         <a href='' class='btn btn-link btn-restore' data-id='{{this.idNH}}'>Khôi phục</a>
                         <a
