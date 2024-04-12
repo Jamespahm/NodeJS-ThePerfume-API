@@ -76,7 +76,8 @@ class PerfumeController {
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            res.redirect('/perfume');
+            // res.redirect('/perfume');
+            res.status(200).json({ message: 'Đã thêm thành công' });
         });
     }
     //[GET] /perfume/:slug
@@ -134,8 +135,8 @@ class PerfumeController {
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            // res.status(200).json({ message: 'Đã cập nhật thành công' });
-            res.redirect('/perfume');
+            res.status(200).json({ message: 'Đã cập nhật thành công' });
+            // res.redirect('/perfume');
         });
     }
     // [PUT] /perfume/delete/:id
@@ -154,7 +155,8 @@ class PerfumeController {
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            res.redirect('/perfume');
+            // res.redirect('/perfume');
+            res.status(200).json({ message: 'Đã xóa mềm thành công' });
         });
     }
     // [DELETE] /perfume/force-delete/:id
@@ -172,7 +174,8 @@ class PerfumeController {
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            res.redirect('/perfume/trash');
+            // res.redirect('/perfume/trash');
+            res.status(200).json({ message: 'Đã xóa thành công' });
         });
     }
     // [GET] /perfume/deleted
@@ -184,7 +187,8 @@ class PerfumeController {
                 res.status(500).json({ error });
                 return;
             }
-            res.render('trash', { perfume: results });
+            // res.render('trash', { perfume: results });
+            res.status(200).json(results);
         });
     }
     // [PUT] /perfume/restore/:id
@@ -202,8 +206,8 @@ class PerfumeController {
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            // res.status(200).json({ message: 'Đã khôi phục sản phẩm thành công' });
-            res.redirect('/perfume/trash');
+            res.status(200).json({ message: 'Đã khôi phục sản phẩm thành công' });
+            // res.redirect('/perfume/trash');
         });
     }
 }
