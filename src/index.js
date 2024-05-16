@@ -3,13 +3,23 @@ const express = require('express');
 const methodOverride = require('method-override');
 const moment = require('moment');
 const handlebars = require('express-handlebars');
+const bodyParser = require('body-parser');
+const session = require('express-session');
+
 const app = express();
 
 const db = require('./config/db');
 const route = require('./routers/index.router');
 
 const port = 8080;
-
+app.use(bodyParser.json());
+app.use(
+    session({
+        secret: 'secret', // Chuỗi bí mật để ký và bảo vệ phiên
+        resave: true,
+        saveUninitialized: true,
+    }),
+);
 // Add CORS middleware
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3033');
@@ -43,5 +53,5 @@ db.connect();
 route(app);
 
 app.listen(port, () => {
-    console.log(`Example app listening on http://localhost:${port}`);
+    console.log(`Example app listening on http://localhost:${port}/api`);
 });

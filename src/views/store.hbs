@@ -1,7 +1,7 @@
 <div class='mt-4'>
     <div>
         <h3>Danh sách nước hoa</h3>
-        <a href='/perfume/trash'>Thùng rác </a>
+        <a href='/api/perfume/trash'>Thùng rác </a>
     </div>
 
     <table class='table mt-4'>
@@ -25,7 +25,7 @@
                     </td>
                     <td>{{this.giaban}}</td>
                     <td>
-                        <a href='/perfume/edit/{{this.idNH}}'>Sửa</a>
+                        <a href='/api/perfume/edit/{{this.idNH}}'>Sửa</a>
 
                         <a
                             href=''
@@ -40,7 +40,7 @@
                 <tr>
                     <td colspan='5' class='text-center'>
                         Chưa có nước hoa nào !
-                        <a href='/perfume/create'>Thêm nước hoa</a>
+                        <a href='/api/perfume/create'>Thêm nước hoa</a>
                     </td>
                 </tr>
             {{/each}}
@@ -76,6 +76,6 @@
     document.addEventListener('DOMContentLoaded', function() { var perfumeId; var deleteForm =
     document.forms['delete-perfume-form']; var btnDeleteCourse = document.getElementById('btn-delete-perfume');
     $('#delete-perfume-modal').on('show.bs.modal', function (event) { var button = $(event.relatedTarget); perfumeId =
-    button.data('id'); }); btnDeleteCourse.onclick = function () { deleteForm.action = '/perfume/delete/' + perfumeId
-    +'?_method=DELETE'; deleteForm.submit(); } });
+    button.data('id'); }); btnDeleteCourse.onclick = function () { deleteForm.action = '/api/perfume/delete/' +
+    perfumeId +'?_method=DELETE'; deleteForm.submit(); } });
 </script>

@@ -15,6 +15,8 @@ router.delete('/deletef/:id', perfumeController.forceDelete);
 router.get('/trash', perfumeController.showDeleted);
 router.patch('/restore/:id', perfumeController.restore);
 
+router.get('/sales', perfumeController.sales);
+
 router.get('/search', perfumeController.search);
 
 router.get('/:slug', perfumeController.show);

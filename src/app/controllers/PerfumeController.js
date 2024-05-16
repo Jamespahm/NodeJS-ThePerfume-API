@@ -6,32 +6,180 @@ const crypto = require('crypto');
 class PerfumeController {
     // [GET] /perfume
     index(req, res, next) {
-        // Thực hiện truy vấn SQL để lấy ra các bản ghi chưa bị xóa mềm
-        db.query('SELECT * FROM nuochoa WHERE deleted_at IS NULL', (error, results) => {
+        const { sl, sortBy, sortOrder, minPrice, maxPrice, categoryId, brandId, page = 1, limit = 9 } = req.query;
+
+        // Tính toán offset
+        const offset = (page - 1) * limit;
+
+        // Xây dựng truy vấn SQL với điều kiện sắp xếp và phân trang (nếu có)
+        let query = 'SELECT * FROM nuochoa WHERE deleted_at IS NULL';
+        let queryParams = [];
+        if (sl) {
+            query += ' AND soluong > 0';
+        }
+        if (minPrice && maxPrice) {
+            query += ' AND giaban BETWEEN ? AND ?';
+            queryParams.push(minPrice, maxPrice);
+        }
+        if (categoryId) {
+            query += ' AND idL = ?';
+            queryParams.push(categoryId);
+        }
+        if (brandId) {
+            query += ' AND idTH = ?';
+            queryParams.push(brandId);
+        }
+        if (sortBy && sortOrder) {
+            query += ` ORDER BY ${sortBy} ${sortOrder}`;
+        } else {
+            query += ' ORDER BY idNH DESC';
+        }
+
+        query += ' LIMIT ? OFFSET ?';
+        queryParams.push(parseInt(limit), parseInt(offset));
+
+        db.query(query, queryParams, (error, results) => {
             if (error) {
                 console.error('Error executing MySQL query: ', error);
                 res.status(500).json({ error });
                 return;
             }
-            // res.render('store', { perfume: results });
-            res.json(results);
-        });
-    }
-    // [GET] /perfume/search
-    search(req, res, next) {
-        const { q } = req.query;
-        db.query(
-            'select * from nuochoa where TenNH like ? or GiaBan like ?',
-            ['%' + q + '%', '%' + q + '%'],
-            (error, results) => {
-                if (error) {
-                    console.error('Error executing MySQL query: ', error);
-                    res.status(500).json({ error });
+
+            // Đếm tổng số sản phẩm để tính tổng số trang
+            db.query('SELECT COUNT(*) AS count FROM nuochoa WHERE deleted_at IS NULL', (countError, countResults) => {
+                if (countError) {
+                    console.error('Error executing MySQL query: ', countError);
+                    res.status(500).json({ error: countError });
                     return;
                 }
-                res.json(results);
-            },
-        );
+
+                const totalItems = countResults[0].count;
+                const totalPages = Math.ceil(totalItems / limit);
+
+                res.json({ products: results, totalPages });
+            });
+        });
+    }
+    // // [GET] /perfume/items
+    // getPerfumeItems(req, res, next) {
+    //     const { sortBy, sortOrder, minPrice, maxPrice, categoryId, brandId, page = 1, limit = 9 } = req.query;
+
+    //     // Tính toán offset
+    //     const offset = (page - 1) * limit;
+
+    //     // Xây dựng truy vấn SQL với điều kiện sắp xếp và phân trang (nếu có)
+    //     let query = 'SELECT * FROM nuochoa WHERE deleted_at IS NULL ';
+    //     let queryParams = [];
+
+    //     if (sortBy && sortOrder) {
+    //         query += ` ORDER BY ${sortBy} ${sortOrder}`;
+    //     } else {
+    //         query += ' ORDER BY idNH DESC';
+    //     }
+    //     query += ' LIMIT ? OFFSET ?';
+    //     queryParams.push(parseInt(limit), parseInt(offset));
+
+    //     db.query(query, queryParams, (error, results) => {
+    //         if (error) {
+    //             console.error('Error executing MySQL query: ', error);
+    //             res.status(500).json({ error });
+    //             return;
+    //         }
+
+    //         // Đếm tổng số sản phẩm để tính tổng số trang
+    //         db.query('SELECT COUNT(*) AS count FROM nuochoa WHERE deleted_at IS NULL', (countError, countResults) => {
+    //             if (countError) {
+    //                 console.error('Error executing MySQL query: ', countError);
+    //                 res.status(500).json({ error: countError });
+    //                 return;
+    //             }
+
+    //             const totalItems = countResults[0].count;
+    //             const totalPages = Math.ceil(totalItems / limit);
+
+    //             res.json({ products: results, totalPages });
+    //         });
+    //     });
+    // }
+    // [GET] /perfume/search
+    search(req, res, next) {
+        const { sl, sortBy, sortOrder, page, limit, q } = req.query;
+        const offset = (page - 1) * limit;
+
+        let query = 'SELECT * FROM nuochoa WHERE deleted_at IS NULL';
+        let queryParams = [];
+        if (sl) {
+            query += ' AND soluong > 0';
+        }
+        if (q) {
+            query += ' AND tenNH LIKE ?';
+            queryParams.push(`%${q}%`);
+        }
+
+        if (sortBy && sortOrder) {
+            query += ` ORDER BY ${sortBy} ${sortOrder}`;
+        } else {
+            query += ' ORDER BY tenNH ASC';
+        }
+
+        query += ' LIMIT ? OFFSET ?';
+        queryParams.push(parseInt(limit), parseInt(offset));
+
+        db.query(query, queryParams, (error, results) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                res.status(500).json({ error });
+                return;
+            }
+
+            // Count total items for pagination
+            let countQuery = 'SELECT COUNT(*) AS count FROM nuochoa WHERE deleted_at IS NULL AND soluong > 0';
+
+            if (q) {
+                countQuery += ' AND tenNH LIKE ?';
+            }
+
+            db.query(countQuery, queryParams.slice(0, -2), (countError, countResults) => {
+                if (countError) {
+                    console.error('Error executing MySQL query: ', countError);
+                    res.status(500).json({ error: countError });
+                    return;
+                }
+
+                const totalItems = countResults[0].count;
+                const totalPages = Math.ceil(totalItems / limit);
+
+                res.json({ products: results, totalPages });
+            });
+        });
+    }
+    // [GET] /perfume/sales
+    sales(req, res, next) {
+        //     const query = `
+        //     SELECT nh.*, SUM(cthd.soluong) AS totalSold
+        //     FROM cthoadon AS cthd
+        //     JOIN nuochoa AS nh ON cthd.idNH = nh.idNH
+        //     GROUP BY nh.idNH
+        //     ORDER BY totalSold DESC
+        // `;
+        const query = `
+        SELECT nh.*, SUM(cthd.soLuong) AS soLuongBan
+        FROM cthoadon AS cthd
+        JOIN nuochoa AS nh ON cthd.idNH = nh.idNH
+        WHERE nh.soluong > 0 AND nh.deleted_at IS NULL
+        GROUP BY nh.idNH
+        ORDER BY soLuongBan DESC
+        LIMIT 8;
+            `;
+
+        db.query(query, (error, results) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                res.status(500).json({ error });
+                return;
+            }
+            res.json(results);
+        });
     }
     creat(req, res) {
         res.render('create');
