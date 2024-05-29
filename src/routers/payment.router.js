@@ -4,6 +4,6 @@ const router = express.Router();
 const paymentController = require('../app/controllers/PaymentController');
 
 router.post('/checkout', paymentController.checkoutCart);
-// router.get('/cart', authController.getCartItems);
+router.post('/checkoutSingle', paymentController.checkoutSingleProduct);
 
 module.exports = router;

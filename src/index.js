@@ -32,6 +32,9 @@ app.use(methodOverride('_method'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Cấu hình để phục vụ các file tĩnh từ thư mục 'uploads'
+app.use('/img', express.static(path.join(__dirname, 'assets/img')));
+
 app.engine(
     'hbs',
     handlebars.engine({

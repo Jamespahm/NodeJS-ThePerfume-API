@@ -2,25 +2,54 @@ const express = require('express');
 const router = express.Router();
 
 const perfumeController = require('../app/controllers/PerfumeController');
+const multer = require('multer');
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, 'src/assets/img/products/');
+        },
+        filename: function (req, file, cb) {
+            cb(null, file.originalname);
+        },
+    }),
+});
+router.post(
+    '/add',
+    upload.fields([
+        { name: 'hinhanh1', maxCount: 1 },
+        { name: 'hinhanh2', maxCount: 1 },
+        { name: 'hinhanh3', maxCount: 1 },
+        { name: 'hinhanh4', maxCount: 1 },
+    ]),
+    perfumeController.addPerfume,
+);
 
-router.get('/creat', perfumeController.creat);
-router.post('/create', perfumeController.create);
+router.put(
+    '/:id/update',
+    upload.fields([
+        { name: 'hinhanh1', maxCount: 1 },
+        { name: 'hinhanh2', maxCount: 1 },
+        { name: 'hinhanh3', maxCount: 1 },
+        { name: 'hinhanh4', maxCount: 1 },
+    ]),
+    perfumeController.updatePerfume,
+);
 
-router.get('/edit/:id', perfumeController.edit);
-router.put('/update/:id', perfumeController.update);
+router.put('/:id/delete', perfumeController.softDeletePerfume);
+router.delete('/:id/deletef', perfumeController.forceDeletePerfume);
 
-router.delete('/delete/:id', perfumeController.softDelete);
-router.delete('/deletef/:id', perfumeController.forceDelete);
+router.get('/trash', perfumeController.getPerfumesDeleted);
+router.put('/:id/restore', perfumeController.restorePerfume);
 
-router.get('/trash', perfumeController.showDeleted);
-router.patch('/restore/:id', perfumeController.restore);
+router.get('/sales', perfumeController.hotSales);
 
-router.get('/sales', perfumeController.sales);
+router.get('/search', perfumeController.searchPerfumes);
 
-router.get('/search', perfumeController.search);
+router.get('/get-once/:id', perfumeController.getPerfumeById);
+router.get('/:slug', perfumeController.getPerfumeBySlug);
 
-router.get('/:slug', perfumeController.show);
+// router.post('/upload', perfumeController.uploadImage);
 
-router.get('/', perfumeController.index);
+router.get('/', perfumeController.getAllPerfumes);
 
 module.exports = router;

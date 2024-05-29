@@ -8,6 +8,7 @@ const paymentRouter = require('./payment.router');
 const favouriteRouter = require('./favourite.router');
 const orderRouter = require('./order.router');
 const statisticRouter = require('./statistic.router');
+const userRouter = require('./user.router');
 
 function route(app) {
     app.use('/api/perfume', perfumeRouter);
@@ -19,6 +20,7 @@ function route(app) {
     app.use('/api/favourite', favouriteRouter);
     app.use('/api/order', orderRouter);
     app.use('/api/statistic', statisticRouter);
+    app.use('/api/user', userRouter);
 
     app.use('/api/', siteRouter);
 }

@@ -75,24 +75,24 @@ class PaymentController {
                                         });
                                     }
 
-                                    // const updatePromises = results.map((item) => {
-                                    //     return new Promise((resolve, reject) => {
-                                    //         const remainingQuantity = item.soLuongTonKho - item.soLuong;
-                                    //         if (remainingQuantity < 0) {
-                                    //             return reject(new Error('Sản phẩm đã hết hàng'));
-                                    //         }
-                                    //         db.query(
-                                    //             'UPDATE nuochoa SET soluong = ? WHERE idNH = ?',
-                                    //             [remainingQuantity, item.idNH],
-                                    //             (updateError) => {
-                                    //                 if (updateError) {
-                                    //                     return reject(updateError);
-                                    //                 }
-                                    //                 resolve();
-                                    //             },
-                                    //         );
-                                    //     });
-                                    // });
+                                    const updatePromises = results.map((item) => {
+                                        return new Promise((resolve, reject) => {
+                                            const remainingQuantity = item.soLuongTonKho - item.soLuong;
+                                            if (remainingQuantity < 0) {
+                                                return reject(new Error('Sản phẩm đã hết hàng'));
+                                            }
+                                            db.query(
+                                                'UPDATE nuochoa SET soluong = ? WHERE idNH = ?',
+                                                [remainingQuantity, item.idNH],
+                                                (updateError) => {
+                                                    if (updateError) {
+                                                        return reject(updateError);
+                                                    }
+                                                    resolve();
+                                                },
+                                            );
+                                        });
+                                    });
 
                                     Promise.all(updatePromises)
                                         .then(() => {
@@ -128,6 +128,101 @@ class PaymentController {
                 });
             },
         );
+    }
+
+    //[POST] /payment/checkoutSingle
+    checkoutSingleProduct(req, res, next) {
+        const tokenUser = req.headers.authorization && req.headers.authorization.split(' ')[1];
+        if (!tokenUser) {
+            return res.status(401).json({ error: 'Token không hợp lệ' });
+        }
+
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(tokenUser, process.env.JWT_SECRET || 'your-secret-key');
+        } catch (error) {
+            return res.status(401).json({ error: 'Token không hợp lệ' });
+        }
+
+        const userId = decodedToken.userId;
+        const { idNH, soLuong, tenNhan, sdtNhan, diaChiNhan, thanhToan } = req.body;
+
+        db.query('SELECT giaban, soLuong AS soLuongTonKho FROM nuochoa WHERE idNH = ?', [idNH], (error, results) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                return res.status(500).json({ error: 'Đã có lỗi xảy ra' });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({ error: 'Sản phẩm không tồn tại' });
+            }
+
+            const product = results[0];
+            const totalPrice = product.giaban * soLuong;
+            const remainingQuantity = product.soLuongTonKho - soLuong;
+
+            if (remainingQuantity < 0) {
+                return res.status(400).json({ error: 'Sản phẩm đã hết hàng' });
+            }
+
+            const idHD = short.generate();
+            const trangThai = 'Chờ xác nhận';
+            const ngayDat = new Date();
+
+            db.beginTransaction((transactionError) => {
+                if (transactionError) {
+                    console.error('Transaction error: ', transactionError);
+                    return res.status(500).json({ error: 'Đã có lỗi xảy ra' });
+                }
+
+                db.query(
+                    'INSERT INTO hoadon (idHD, idKH, trangthai, ngaydat, ngaygiao, tongtien, tennhan, sdtnhan, diachinhan, thanhtoan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [idHD, userId, trangThai, ngayDat, null, totalPrice, tenNhan, sdtNhan, diaChiNhan, thanhToan],
+                    (insertError) => {
+                        if (insertError) {
+                            console.error('Error inserting into hoadon: ', insertError);
+                            return db.rollback(() => {
+                                res.status(500).json({ error: 'Đã có lỗi xảy ra' });
+                            });
+                        }
+
+                        db.query(
+                            'INSERT INTO cthoadon (idCTHD, idHD, idNH, soLuong, giaban) VALUES (?, ?, ?, ?, ?)',
+                            [short.generate(), idHD, idNH, soLuong, product.giaban],
+                            (insertCTHDError) => {
+                                if (insertCTHDError) {
+                                    console.error('Error inserting into cthoadon: ', insertCTHDError);
+                                    return db.rollback(() => {
+                                        res.status(500).json({ error: 'Đã có lỗi xảy ra' });
+                                    });
+                                }
+
+                                db.query(
+                                    'UPDATE nuochoa SET soluong = ? WHERE idNH = ?',
+                                    [remainingQuantity, idNH],
+                                    (updateError) => {
+                                        if (updateError) {
+                                            console.error('Error updating product quantity: ', updateError);
+                                            return db.rollback(() => {
+                                                res.status(500).json({ error: 'Đã có lỗi xảy ra' });
+                                            });
+                                        }
+
+                                        db.commit((commitError) => {
+                                            if (commitError) {
+                                                console.error('Commit error: ', commitError);
+                                                return res.status(500).json({ error: 'Đã có lỗi xảy ra' });
+                                            }
+                                            res.status(200).json({ message: 'Thanh toán thành công' });
+                                        });
+                                    },
+                                );
+                            },
+                        );
+                    },
+                );
+            });
+        });
     }
 }
 

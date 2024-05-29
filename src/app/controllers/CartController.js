@@ -21,11 +21,7 @@ class CartController {
                         res.status(500).json({ error });
                         return;
                     }
-                    // Kiểm tra xem có bản ghi nào được tìm thấy hay không
-                    if (results.length === 0) {
-                        res.status(404).json({ error: 'Không tìm thấy bản ghi với idKH này' });
-                        return;
-                    }
+
                     // Trả về thông tin các item trong giỏ hàng kèm thông tin nước hoa tương ứng
                     res.json(results);
                 },
