@@ -45,7 +45,7 @@ class PerfumeController {
         if (sortBy && sortOrder) {
             query += ` ORDER BY ${sortBy} ${sortOrder}`;
         } else {
-            query += ' ORDER BY idNH DESC';
+            query += ' ORDER BY soluongban DESC';
         }
 
         query += ' LIMIT ? OFFSET ?';
@@ -146,7 +146,24 @@ class PerfumeController {
             res.json(results);
         });
     }
+    // [GET] /perfume/newest
+    getNewestPerfumes(req, res, next) {
+        const query = `
+            SELECT * FROM nuochoa 
+            WHERE deleted_at IS NULL 
+            ORDER BY created_at DESC 
+            LIMIT 8;
+        `;
 
+        db.query(query, (error, results) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                res.status(500).json({ error });
+                return;
+            }
+            res.json(results);
+        });
+    }
     // [POST] /perfume/add
     addPerfume(req, res) {
         // Tạo slug từ tiêu đề
@@ -162,7 +179,7 @@ class PerfumeController {
         slug += '-' + randomString;
 
         // Sử dụng prepared statement để tránh tấn công SQL Injection
-        const query = `INSERT INTO nuochoa (idNH, tenNH, giaban, dungtich, hinhanh1, hinhanh2, hinhanh3, hinhanh4, soluong, mota, slug, idTH, idL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const query = `INSERT INTO nuochoa (idNH, tenNH, giaban, dungtich, hinhanh1, hinhanh2, hinhanh3, hinhanh4, soluong, mota, motact, slug, idTH, idL,created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, CURRENT_TIMESTAMP)`;
 
         const getFileName = (filePath) => (filePath ? path.basename(filePath) : null);
 
@@ -177,6 +194,7 @@ class PerfumeController {
             getFileName(req.files.hinhanh4 ? req.files.hinhanh4[0].path : null),
             req.body.soluong,
             req.body.mota,
+            req.body.motact,
             slug,
             req.body.idTH,
             req.body.idL,
@@ -236,7 +254,9 @@ class PerfumeController {
             req.files?.hinhanh4 ? path.basename(req.files.hinhanh4[0].path) : req.body.hinhanh4,
         );
         addFieldToUpdate('soluong', req.body.soluong);
+        addFieldToUpdate('soluongban', req.body.soluongban);
         addFieldToUpdate('mota', req.body.mota);
+        addFieldToUpdate('motact', req.body.motact);
         addFieldToUpdate('idTH', req.body.idTH);
         addFieldToUpdate('idL', req.body.idL);
         addFieldToUpdate('slug', slug);
@@ -282,7 +302,41 @@ class PerfumeController {
             res.json(results[0]);
         });
     }
+    // [GET] /perfume/related/:id
+    getRelatedPerfumes(req, res) {
+        const slug = req.params.slug;
 
+        // Get the current perfume's details to find related ones
+        db.query('SELECT * FROM nuochoa WHERE slug = ?', [slug], (error, results) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                res.status(500).json({ error });
+                return;
+            }
+
+            if (results.length === 0) {
+                res.status(404).json({ error: 'Perfume not found' });
+                return;
+            }
+
+            const currentPerfume = results[0];
+
+            // Query for related perfumes in the same category or brand, excluding the current one
+            db.query(
+                'SELECT * FROM nuochoa WHERE (idL = ? OR idTH = ?) AND slug != ? AND deleted_at IS NULL LIMIT 6',
+                [currentPerfume.idL, currentPerfume.idTH, slug],
+                (relatedError, relatedResults) => {
+                    if (relatedError) {
+                        console.error('Error executing MySQL query: ', relatedError);
+                        res.status(500).json({ error: relatedError });
+                        return;
+                    }
+
+                    res.json({ relatedPerfumes: relatedResults });
+                },
+            );
+        });
+    }
     //[GET] /perfume/get-once/:id
     getPerfumeById(req, res, next) {
         // Lấy giá trị của slug từ request

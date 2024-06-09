@@ -42,9 +42,11 @@ router.get('/trash', perfumeController.getPerfumesDeleted);
 router.put('/:id/restore', perfumeController.restorePerfume);
 
 router.get('/sales', perfumeController.hotSales);
+router.get('/newest', perfumeController.getNewestPerfumes);
 
 router.get('/search', perfumeController.searchPerfumes);
 
+router.get('/related/:slug', perfumeController.getRelatedPerfumes); // New route for related perfumes
 router.get('/get-once/:id', perfumeController.getPerfumeById);
 router.get('/:slug', perfumeController.getPerfumeBySlug);
 

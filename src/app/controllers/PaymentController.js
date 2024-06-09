@@ -1,9 +1,14 @@
 const jwt = require('jsonwebtoken');
-const db = require('./../../config/db');
-const short = require('short-uuid');
+const db = require('../../config/db');
+// const io = require('socket.io')(server); // Đảm bảo rằng bạn đã khởi tạo socket.io với server
+
+// Hàm để chuyển đổi UUID thành chuỗi số ngắn
+const generateUniqueId = () => {
+    return Date.now() + Math.floor(Math.random() * 1000); // Kết hợp timestamp và số ngẫu nhiên
+};
 
 class PaymentController {
-    //[POST] /payment/checkout
+    // [POST] /payment/checkout
     checkoutCart(req, res, next) {
         const tokenUser = req.headers.authorization && req.headers.authorization.split(' ')[1];
         if (!tokenUser) {
@@ -34,9 +39,10 @@ class PaymentController {
 
                 const totalPrice = results.reduce((total, item) => total + item.soLuong * item.giaban, 0);
 
-                const idHD = short.generate();
-                const trangThai = 'Chờ xác nhận';
+                const idHD = 'HD' + generateUniqueId(); // Sử dụng generateUniqueId để tạo idHD
+                const trangThai = '1';
                 const ngayDat = new Date();
+                const updated_at = new Date();
                 const { tenNhan, sdtNhan, diaChiNhan, thanhToan } = req.body;
 
                 db.beginTransaction((transactionError) => {
@@ -46,8 +52,20 @@ class PaymentController {
                     }
 
                     db.query(
-                        'INSERT INTO hoadon (idHD, idKH, trangthai, ngaydat, ngaygiao, tongtien, tennhan, sdtnhan, diachinhan, thanhtoan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                        [idHD, userId, trangThai, ngayDat, null, totalPrice, tenNhan, sdtNhan, diaChiNhan, thanhToan],
+                        'INSERT INTO hoadon (idHD, idKH, trangthai, ngaydat, ngaygiao, tongtien, tennhan, sdtnhan, diachinhan, thanhtoan, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                        [
+                            idHD,
+                            userId,
+                            trangThai,
+                            ngayDat,
+                            null,
+                            totalPrice,
+                            tenNhan,
+                            sdtNhan,
+                            diaChiNhan,
+                            thanhToan,
+                            updated_at,
+                        ],
                         (insertError) => {
                             if (insertError) {
                                 console.error('Error inserting into hoadon: ', insertError);
@@ -57,7 +75,7 @@ class PaymentController {
                             }
 
                             const insertValues = results.map((item) => [
-                                short.generate(),
+                                'CTHD' + generateUniqueId(), // Sử dụng generateUniqueId để tạo idCTHD
                                 idHD,
                                 item.idNH,
                                 item.soLuong,
@@ -82,8 +100,8 @@ class PaymentController {
                                                 return reject(new Error('Sản phẩm đã hết hàng'));
                                             }
                                             db.query(
-                                                'UPDATE nuochoa SET soluong = ? WHERE idNH = ?',
-                                                [remainingQuantity, item.idNH],
+                                                'UPDATE nuochoa SET soluong = ?, soluongban = soluongban + ? WHERE idNH = ?',
+                                                [remainingQuantity, item.soLuong, item.idNH],
                                                 (updateError) => {
                                                     if (updateError) {
                                                         return reject(updateError);
@@ -110,6 +128,27 @@ class PaymentController {
                                                             console.error('Error deleting cart data: ', deleteError);
                                                             return res.status(500).json({ error: 'Đã có lỗi xảy ra' });
                                                         }
+
+                                                        // Tạo thông báo mới
+                                                        const idTB = 'TB' + generateUniqueId();
+                                                        const message = `Người dùng vừa tạo đơn hàng mới.`;
+                                                        const type = 'Đơn mới';
+                                                        const query = `INSERT INTO thongbao (idTB, idKH, noidung, loai) VALUES (?, ?, ?, ?)`;
+                                                        db.query(
+                                                            query,
+                                                            [idTB, userId, message, type],
+                                                            (notificationError) => {
+                                                                if (notificationError) {
+                                                                    console.error(
+                                                                        'Error creating notification: ',
+                                                                        notificationError,
+                                                                    );
+                                                                } else {
+                                                                    console.log('Thông báo đã được tạo thành công');
+                                                                }
+                                                            },
+                                                        );
+
                                                         res.status(200).json({ message: 'Thanh toán thành công' });
                                                     },
                                                 );
@@ -130,7 +169,7 @@ class PaymentController {
         );
     }
 
-    //[POST] /payment/checkoutSingle
+    // [POST] /payment/checkoutSingle
     checkoutSingleProduct(req, res, next) {
         const tokenUser = req.headers.authorization && req.headers.authorization.split(' ')[1];
         if (!tokenUser) {
@@ -165,9 +204,10 @@ class PaymentController {
                 return res.status(400).json({ error: 'Sản phẩm đã hết hàng' });
             }
 
-            const idHD = short.generate();
-            const trangThai = 'Chờ xác nhận';
+            const idHD = 'HD' + generateUniqueId(); // Sử dụng generateUniqueId để tạo idHD
+            const trangThai = '1';
             const ngayDat = new Date();
+            const updated_at = new Date();
 
             db.beginTransaction((transactionError) => {
                 if (transactionError) {
@@ -176,8 +216,20 @@ class PaymentController {
                 }
 
                 db.query(
-                    'INSERT INTO hoadon (idHD, idKH, trangthai, ngaydat, ngaygiao, tongtien, tennhan, sdtnhan, diachinhan, thanhtoan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [idHD, userId, trangThai, ngayDat, null, totalPrice, tenNhan, sdtNhan, diaChiNhan, thanhToan],
+                    'INSERT INTO hoadon (idHD, idKH, trangthai, ngaydat, ngaygiao, tongtien, tennhan, sdtnhan, diachinhan, thanhtoan,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?)',
+                    [
+                        idHD,
+                        userId,
+                        trangThai,
+                        ngayDat,
+                        null,
+                        totalPrice,
+                        tenNhan,
+                        sdtNhan,
+                        diaChiNhan,
+                        thanhToan,
+                        updated_at,
+                    ],
                     (insertError) => {
                         if (insertError) {
                             console.error('Error inserting into hoadon: ', insertError);
@@ -188,7 +240,7 @@ class PaymentController {
 
                         db.query(
                             'INSERT INTO cthoadon (idCTHD, idHD, idNH, soLuong, giaban) VALUES (?, ?, ?, ?, ?)',
-                            [short.generate(), idHD, idNH, soLuong, product.giaban],
+                            ['CTHD' + generateUniqueId(), idHD, idNH, soLuong, product.giaban], // Sử dụng generateUniqueId để tạo idCTHD
                             (insertCTHDError) => {
                                 if (insertCTHDError) {
                                     console.error('Error inserting into cthoadon: ', insertCTHDError);
@@ -198,8 +250,8 @@ class PaymentController {
                                 }
 
                                 db.query(
-                                    'UPDATE nuochoa SET soluong = ? WHERE idNH = ?',
-                                    [remainingQuantity, idNH],
+                                    'UPDATE nuochoa SET soluong = ?, soluongban = soluongban + ? WHERE idNH = ?',
+                                    [remainingQuantity, soLuong, idNH],
                                     (updateError) => {
                                         if (updateError) {
                                             console.error('Error updating product quantity: ', updateError);
@@ -213,6 +265,20 @@ class PaymentController {
                                                 console.error('Commit error: ', commitError);
                                                 return res.status(500).json({ error: 'Đã có lỗi xảy ra' });
                                             }
+
+                                            // Tạo thông báo mới
+                                            const idTB = 'TB' + generateUniqueId();
+                                            const message = `Người dùng vừa tạo đơn hàng mới.`;
+                                            const type = 'Đơn mới';
+                                            const query = `INSERT INTO thongbao (idTB, idKH, noidung, loai) VALUES (?, ?, ?, ?)`;
+                                            db.query(query, [idTB, userId, message, type], (notificationError) => {
+                                                if (notificationError) {
+                                                    console.error('Error creating notification: ', notificationError);
+                                                } else {
+                                                    console.log('Thông báo đã được tạo thành công');
+                                                }
+                                            });
+
                                             res.status(200).json({ message: 'Thanh toán thành công' });
                                         });
                                     },

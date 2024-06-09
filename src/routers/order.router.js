@@ -11,11 +11,13 @@ router.put('/:id/restore', orderController.restoreOrder);
 
 router.get('/detail/:orderId', orderController.getDetailOrder);
 router.put('/update/:orderId', orderController.updateOrder);
+router.put('/cancel/:orderId', orderController.cancelOrder);
 router.get('/search', orderController.search);
 
-router.get('/orderitems', orderController.getOrderItems);
+router.get('/orderitems', orderController.getOrderItemsByToken);
+router.get('/orderitems/:userId', orderController.getOrderItemsByUserId);
 
 router.get('/get-once/:id', orderController.getOrderById);
-router.get('/', orderController.getItems);
+router.get('/', orderController.getAllOrders);
 
 module.exports = router;

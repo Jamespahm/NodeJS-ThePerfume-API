@@ -91,7 +91,7 @@ class UserController {
             // Count total items for pagination
             let countQuery = 'SELECT COUNT(*) AS count FROM khachhang WHERE deleted_at IS NULL ';
 
-            if ((q, q, q)) {
+            if (q) {
                 countQuery += ' AND tenKH LIKE ? or gioitinh LIKE ? or email LIKE ? or sdt LIKE ?';
             }
 
@@ -115,11 +115,12 @@ class UserController {
         const getFileName = (filePath) => (filePath ? path.basename(filePath) : null);
 
         // Sử dụng prepared statement để tránh tấn công SQL Injection
-        const query = `INSERT INTO khachhang (idKH, tenKH,gioitinh, sdt,email,diachi,matkhau, avatar) VALUES (?, ?, ?, ?, ?, ?,?, ?)`;
+        const query = `INSERT INTO khachhang (idKH, tenKH,gioitinh, tenDN,sdt,email,diachi,matkhau, avatar) VALUES (?, ?,?, ?, ?, ?, ?,?, ?)`;
         const values = [
             short.generate(),
             req.body.tenKH,
             req.body.gioitinh,
+            req.body.tenDN,
             req.body.sdt,
             req.body.email,
             req.body.diachi,

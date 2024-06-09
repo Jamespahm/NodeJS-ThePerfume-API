@@ -18,7 +18,7 @@ router.put('/:id/update', upload.fields([{ name: 'avatar', maxCount: 1 }]), user
 
 router.get('/get-once/:id', userController.getUserById);
 
-router.put('/delete/:id', userController.softDelete);
+router.put('/:id/delete', userController.softDelete);
 router.delete('/:id/deletef', userController.forceDelete);
 
 router.get('/trash', userController.showDeleted);

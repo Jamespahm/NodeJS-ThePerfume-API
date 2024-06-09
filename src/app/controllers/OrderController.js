@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 
 class OrderController {
     // [GET] /order
-    getItems(req, res, next) {
+    getAllOrders(req, res, next) {
         const { sortBy, sortOrder, page = 1, limit = 10 } = req.query;
 
         // Tính toán offset
@@ -29,19 +29,122 @@ class OrderController {
                 return;
             }
 
-            // Đếm tổng số hóa đơn để tính tổng số trang
-            db.query('SELECT COUNT(*) AS count FROM hoadon WHERE deleted_at IS NULL', (countError, countResults) => {
-                if (countError) {
-                    console.error('Error executing MySQL query: ', countError);
-                    res.status(500).json({ error: countError });
-                    return;
-                }
+            // Nếu không có hóa đơn nào, trả về kết quả rỗng
+            if (results.length === 0) {
+                res.json({ orders: [], totalPages: 0 });
+                return;
+            }
 
-                const totalItems = countResults[0].count;
-                const totalPages = Math.ceil(totalItems / limit);
-
-                res.json({ orders: results, totalPages });
+            // Lấy chi tiết hóa đơn
+            const ordersWithDetails = results.map((order) => {
+                return new Promise((resolve, reject) => {
+                    db.query(
+                        'SELECT cthd.*, nh.tenNH, nh.dungtich, nh.hinhanh1 FROM cthoadon AS cthd JOIN nuochoa AS nh ON cthd.idNH = nh.idNH WHERE cthd.idHD = ?',
+                        [order.idHD],
+                        (detailsError, details) => {
+                            if (detailsError) {
+                                console.error('Error executing MySQL query: ', detailsError);
+                                reject(detailsError);
+                            } else {
+                                resolve({ ...order, details });
+                            }
+                        },
+                    );
+                });
             });
+
+            Promise.all(ordersWithDetails)
+                .then((results) => {
+                    // Đếm tổng số hóa đơn để tính tổng số trang
+                    db.query(
+                        'SELECT COUNT(*) AS count FROM hoadon WHERE deleted_at IS NULL',
+                        (countError, countResults) => {
+                            if (countError) {
+                                console.error('Error executing MySQL query: ', countError);
+                                res.status(500).json({ error: countError });
+                                return;
+                            }
+
+                            const totalItems = countResults[0].count;
+                            const totalPages = Math.ceil(totalItems / limit);
+
+                            res.json({ orders: results, totalPages });
+                        },
+                    );
+                })
+                .catch((detailsError) => {
+                    res.status(500).json({ error: detailsError });
+                });
+        });
+    }
+
+    // [GET] /order/orderitems
+    getOrderItemsByToken(req, res, next) {
+        const { trangthai, userId, page = 1, limit = 10 } = req.query;
+
+        const offset = (page - 1) * limit;
+        let query = `SELECT * FROM hoadon WHERE deleted_at IS NULL AND idKH = ?`;
+        let queryParams = [userId];
+
+        if (trangthai && trangthai !== '0') {
+            query += ` AND trangthai = ?`;
+            queryParams.push(trangthai);
+        }
+
+        query += ` ORDER BY updated_at DESC LIMIT ? OFFSET ?`;
+        queryParams.push(parseInt(limit), parseInt(offset));
+
+        db.query(query, queryParams, (error, orders) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                res.status(500).json({ error });
+                return;
+            }
+
+            // if (orders.length === 0) {
+            //     res.status(404).json({ error: 'Không tìm thấy hóa đơn nào' });
+            //     return;
+            // }
+
+            const ordersWithDetails = orders.map((order) => {
+                return new Promise((resolve, reject) => {
+                    db.query(
+                        'SELECT cthd.*, nh.tenNH, nh.dungtich, nh.hinhanh1 FROM cthoadon AS cthd JOIN nuochoa AS nh ON cthd.idNH = nh.idNH WHERE cthd.idHD = ?',
+                        [order.idHD],
+                        (detailsError, details) => {
+                            if (detailsError) {
+                                console.error('Error executing MySQL query: ', detailsError);
+                                reject(detailsError);
+                            } else {
+                                resolve({ ...order, details });
+                            }
+                        },
+                    );
+                });
+            });
+
+            Promise.all(ordersWithDetails)
+                .then((results) => {
+                    db.query(
+                        'SELECT COUNT(*) AS count FROM hoadon WHERE idKH = ? AND deleted_at IS NULL',
+                        [userId],
+                        (countError, countResults) => {
+                            if (countError) {
+                                console.error('Error executing MySQL query: ', countError);
+                                res.status(500).json({ error: countError });
+                                return;
+                            }
+
+                            const totalItems = countResults[0].count;
+                            const totalPages = Math.ceil(totalItems / limit);
+
+                            res.json({ orders: results, totalPages });
+                        },
+                    );
+                })
+                .catch((detailsError) => {
+                    res.status(500).json({ error: detailsError });
+                });
         });
     }
     // [GET] /order/get-once/:id
@@ -65,7 +168,7 @@ class OrderController {
         });
     }
     // [GET] /order/orderitems
-    getOrderItems(req, res, next) {
+    getOrderItemsByUserId(req, res, next) {
         const { userId, page = 1, limit = 10 } = req.query;
 
         const offset = (page - 1) * limit;
@@ -178,7 +281,6 @@ class OrderController {
             });
         });
     }
-
     // [GET] /order/detail/:orderId
     getDetailOrder(req, res, next) {
         const orderId = req.params.orderId;
@@ -224,9 +326,14 @@ class OrderController {
                 return;
             }
 
+            let ngaygiao;
+            if (order.trangthai === '3') {
+                ngaygiao = new Date();
+            }
+
             // Cập nhật thông tin hóa đơn
             db.query(
-                'UPDATE hoadon SET tennhan = ?, sdtnhan = ?, diachinhan = ?, tongtien = ?, thanhtoan = ?, trangthai = ? WHERE idHD = ?',
+                'UPDATE hoadon SET tennhan = ?, sdtnhan = ?, diachinhan = ?, tongtien = ?, thanhtoan = ?, trangthai = ?,ngaygiao=?, updated_at=CURRENT_TIMESTAMP WHERE idHD = ?',
                 [
                     order.tennhan,
                     order.sdtnhan,
@@ -234,6 +341,7 @@ class OrderController {
                     order.tongtien,
                     order.thanhtoan,
                     order.trangthai,
+                    ngaygiao,
                     orderId,
                 ],
                 (orderError) => {
@@ -283,46 +391,198 @@ class OrderController {
             );
         });
     }
+    // [PUT] /order/cancel/:orderId
+    cancelOrder(req, res, next) {
+        const orderId = req.params.orderId;
+
+        db.query('SELECT * FROM hoadon WHERE idHD = ? AND deleted_at IS NULL', [orderId], (error, results) => {
+            if (error) {
+                console.error('Error executing MySQL query: ', error);
+                res.status(500).json({ error });
+                return;
+            }
+
+            if (results.length === 0) {
+                res.status(404).json({ message: 'Order not found' });
+                return;
+            }
+
+            const order = results[0];
+
+            if (order.trangthai !== '1') {
+                res.status(409).json({ message: 'Đơn hàng không thể hủy, hãy liên hệ người bán để hỗ trợ' });
+                return;
+            }
+
+            db.query(
+                'UPDATE hoadon SET trangthai = 4,updated_at=CURRENT_TIMESTAMP WHERE idHD = ?',
+                [orderId],
+                (updateError) => {
+                    if (updateError) {
+                        console.error('Error executing MySQL query: ', updateError);
+                        res.status(500).json({ error: updateError });
+                        return;
+                    }
+
+                    res.status(200).json({ message: 'Đã hủy đơn hàng thành công !' });
+                },
+            );
+        });
+    }
 
     // [PUT] /order/:id/delete
     softDeleteOrder(req, res) {
         const id = req.params.id;
 
-        const query = `
-            UPDATE hoadon
-            SET deleted_at = CURRENT_TIMESTAMP
-            WHERE idHD = ?`;
-        const values = [id];
+        const deleteOrderQuery = `
+         UPDATE hoadon
+    SET deleted_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE idHD = ?`;
 
-        db.query(query, values, (error, result) => {
+        const deleteOrderDetailQuery = `
+        UPDATE cthoadon
+        SET deleted_at = CURRENT_TIMESTAMP
+        WHERE idHD = ?`;
+
+        db.beginTransaction((error) => {
             if (error) {
-                console.error('Error executing MySQL query: ', error);
+                console.error('Error starting MySQL transaction: ', error);
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            // res.redirect('/order');
-            res.status(200).json({ message: 'Đã xóa mềm thành công' });
+
+            db.query(deleteOrderQuery, [id], (error, result) => {
+                if (error) {
+                    return db.rollback(() => {
+                        console.error('Error executing MySQL query to delete order: ', error);
+                        res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                    });
+                }
+
+                db.query(deleteOrderDetailQuery, [id], (error, result) => {
+                    if (error) {
+                        return db.rollback(() => {
+                            console.error('Error executing MySQL query to delete order details: ', error);
+                            res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                        });
+                    }
+
+                    db.commit((error) => {
+                        if (error) {
+                            return db.rollback(() => {
+                                console.error('Error committing MySQL transaction: ', error);
+                                res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                            });
+                        }
+                        res.status(200).json({ message: 'Đã xóa mềm hóa đơn và các chi tiết thành công' });
+                    });
+                });
+            });
         });
     }
+
     // [DELETE] /order/:id/deletef
     forceDeleteOrder(req, res) {
         const id = req.params.id;
 
-        const query = `
-            DELETE FROM hoadon
-            WHERE idHD = ?`;
-        const values = [id];
+        const deleteOrderQuery = `
+        DELETE FROM hoadon
+        WHERE idHD = ?`;
 
-        db.query(query, values, (error, result) => {
+        const deleteOrderDetailQuery = `
+        DELETE FROM cthoadon
+        WHERE idHD = ?`;
+
+        db.beginTransaction((error) => {
             if (error) {
-                console.error('Error executing MySQL query: ', error);
+                console.error('Error starting MySQL transaction: ', error);
                 res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
                 return;
             }
-            // res.redirect('/order/trash');
-            res.status(200).json({ message: 'Đã xóa thành công' });
+
+            db.query(deleteOrderDetailQuery, [id], (error, result) => {
+                if (error) {
+                    return db.rollback(() => {
+                        console.error('Error executing MySQL query to delete order details: ', error);
+                        res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                    });
+                }
+
+                db.query(deleteOrderQuery, [id], (error, result) => {
+                    if (error) {
+                        return db.rollback(() => {
+                            console.error('Error executing MySQL query to delete order: ', error);
+                            res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                        });
+                    }
+
+                    db.commit((error) => {
+                        if (error) {
+                            return db.rollback(() => {
+                                console.error('Error committing MySQL transaction: ', error);
+                                res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                            });
+                        }
+                        res.status(200).json({ message: 'Đã xóa hóa đơn và các chi tiết thành công' });
+                    });
+                });
+            });
         });
     }
+
+    // [PUT] /order/:id/restore
+    restoreOrder(req, res) {
+        const id = req.params.id;
+
+        const restoreOrderQuery = `
+        UPDATE hoadon
+        SET deleted_at = NULL,
+        updated_at=CURRENT_TIMESTAMP
+        WHERE idHD = ?`;
+
+        const restoreOrderDetailQuery = `
+        UPDATE cthoadon
+        SET deleted_at = NULL
+        WHERE idHD = ?`;
+
+        db.beginTransaction((error) => {
+            if (error) {
+                console.error('Error starting MySQL transaction: ', error);
+                res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                return;
+            }
+
+            db.query(restoreOrderDetailQuery, [id], (error, result) => {
+                if (error) {
+                    return db.rollback(() => {
+                        console.error('Error executing MySQL query to restore order details: ', error);
+                        res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                    });
+                }
+
+                db.query(restoreOrderQuery, [id], (error, result) => {
+                    if (error) {
+                        return db.rollback(() => {
+                            console.error('Error executing MySQL query to restore order: ', error);
+                            res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                        });
+                    }
+
+                    db.commit((error) => {
+                        if (error) {
+                            return db.rollback(() => {
+                                console.error('Error committing MySQL transaction: ', error);
+                                res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
+                            });
+                        }
+                        res.status(200).json({ message: 'Đã khôi phục hóa đơn và các chi tiết thành công' });
+                    });
+                });
+            });
+        });
+    }
+
     // [GET] /order/trash
     getOrdersDeleted(req, res, next) {
         // Thực hiện truy vấn SQL để lấy ra các bản ghi đã bị xóa mềm
@@ -369,24 +629,6 @@ class OrderController {
                     res.json({ results, totalPages });
                 },
             );
-        });
-    }
-    // [PUT] /order/:id/restore
-    restoreOrder(req, res) {
-        const id = req.params.id;
-        const query = `
-            UPDATE hoadon
-            SET deleted_at = NULL
-            WHERE idHD = ?`;
-        const values = [id];
-
-        db.query(query, values, (error, result) => {
-            if (error) {
-                console.error('Error executing MySQL query: ', error);
-                res.status(500).json({ error: 'Đã xảy ra lỗi trong quá trình xử lý yêu cầu' });
-                return;
-            }
-            res.status(200).json({ message: 'Đã khôi phục hóa đơn thành công' });
         });
     }
 }

@@ -2,23 +2,30 @@ const express = require('express');
 const router = express.Router();
 
 const brandController = require('../app/controllers/BrandController');
+const multer = require('multer');
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, 'src/assets/img/banner/');
+        },
+        filename: function (req, file, cb) {
+            cb(null, file.originalname);
+        },
+    }),
+});
+router.post('/create', upload.fields([{ name: 'hinhanh', maxCount: 1 }]), brandController.createBrand);
+router.put('/:id/update', upload.fields([{ name: 'hinhanh', maxCount: 1 }]), brandController.updateBrand);
 
-router.get('/creat', brandController.creat);
-router.post('/create', brandController.create);
+router.get('/get-once/:id', brandController.getBrandById);
 
-router.get('/edit/:id', brandController.edit);
-router.put('/update/:id', brandController.update);
-
-router.delete('/delete/:id', brandController.softDelete);
-router.delete('/deletef/:id', brandController.forceDelete);
+router.put('/:id/delete', brandController.softDelete);
+router.delete('/:id/deletef', brandController.forceDelete);
 
 router.get('/trash', brandController.showDeleted);
-router.patch('/restore/:id', brandController.restore);
+router.put('/:id/restore', brandController.restore);
 
 router.get('/search', brandController.search);
 
-router.get('/:id', brandController.show);
-
-router.get('/', brandController.index);
+router.get('/', brandController.getAllBrands);
 
 module.exports = router;
